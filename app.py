@@ -3,6 +3,7 @@ import yfinance as yf
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
 import pandas as pd
+import time
 
 # Page configuration
 st.set_page_config(
@@ -47,38 +48,78 @@ with st.sidebar:
 # Main content
 st.markdown('<h1 class="main-header">Financial Dashboard</h1>', unsafe_allow_html=True)
 
-# Load stock data
-@st.cache_data(ttl=3600)
-def load_stock_data(symbol, period):
-    stock = yf.Ticker(symbol)
-    hist = stock.history(period=period)
-    return stock, hist
+# Load stock data with improved error handling
+@st.cache_data(ttl=1800)  # Cache for 30 minutes
+def load_stock_data(symbol, period, max_retries=3, retry_delay=2):
+    for attempt in range(max_retries):
+        try:
+            # Create Ticker object
+            stock = yf.Ticker(symbol)
+            
+            # Verify the symbol exists by checking info
+            info = stock.info
+            if not info or 'regularMarketPrice' not in info:
+                raise ValueError(f"No data available for symbol {symbol}")
+            
+            # Get historical data
+            hist = stock.history(period=period)
+            if hist.empty:
+                raise ValueError(f"No historical data found for symbol {symbol}")
+            
+            return stock, hist, info
+            
+        except Exception as e:
+            if "Too Many Requests" in str(e):
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    continue
+            elif attempt < max_retries - 1:
+                time.sleep(1)  # Brief delay between retries
+                continue
+            raise e
 
 try:
-    stock, hist = load_stock_data(ticker, period)
+    with st.spinner('Loading stock data...'):
+        stock, hist, info = load_stock_data(ticker, period)
+    
+    # Display company info
+    st.subheader(f"{info.get('longName', ticker)} ({ticker})")
+    col_info1, col_info2 = st.columns(2)
+    with col_info1:
+        st.write(f"**Sector:** {info.get('sector', 'N/A')}")
+        st.write(f"**Industry:** {info.get('industry', 'N/A')}")
+    with col_info2:
+        st.write(f"**Currency:** {info.get('currency', 'USD')}")
+        st.write(f"**Market Cap:** ${info.get('marketCap', 0):,.0f}")
     
     # Key metrics
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("Current Price", f"${hist['Close'][-1]:.2f}", 
-                 f"{((hist['Close'][-1] - hist['Close'][-2])/hist['Close'][-2]*100):.2f}%")
+        current_price = info.get('regularMarketPrice', hist['Close'][-1])
+        prev_close = info.get('previousClose', hist['Close'][-2])
+        price_change = ((current_price - prev_close)/prev_close*100)
+        st.metric(
+            "Current Price", 
+            f"${current_price:.2f}", 
+            f"{price_change:.2f}%"
+        )
         st.markdown('</div>', unsafe_allow_html=True)
     
     with col2:
         st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("Volume", f"{hist['Volume'][-1]:,.0f}")
+        st.metric("Volume", f"{info.get('volume', hist['Volume'][-1]):,.0f}")
         st.markdown('</div>', unsafe_allow_html=True)
     
     with col3:
         st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("52W High", f"${hist['High'].max():.2f}")
+        st.metric("52W High", f"${info.get('fiftyTwoWeekHigh', hist['High'].max()):.2f}")
         st.markdown('</div>', unsafe_allow_html=True)
     
     with col4:
         st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("52W Low", f"${hist['Low'].min():.2f}")
+        st.metric("52W Low", f"${info.get('fiftyTwoWeekLow', hist['Low'].min()):.2f}")
         st.markdown('</div>', unsafe_allow_html=True)
 
     # Price Chart
@@ -117,6 +158,12 @@ try:
     st.plotly_chart(fig_volume, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
+except ValueError as ve:
+    st.error(str(ve))
+    st.info("Please check if the stock symbol is correct and try again.")
 except Exception as e:
-    st.error(f"Error loading data: {str(e)}")
-    st.info("Please enter a valid stock symbol and try again.") 
+    if "Too Many Requests" in str(e):
+        st.error("We're experiencing high traffic. Please wait a few seconds and try again.")
+    else:
+        st.error(f"Error loading data: {str(e)}")
+    st.info("Try refreshing the page or using a different stock symbol.") 
