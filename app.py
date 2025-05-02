@@ -7,7 +7,7 @@ import json
 
 # Page configuration
 st.set_page_config(
-    page_title="Advanced Stock Analysis Dashboard",
+    page_title="Global Markets Dashboard",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -16,6 +16,7 @@ st.set_page_config(
 # Enhanced CSS styling
 st.markdown("""
 <style>
+    /* Main styles */
     .main-header {
         font-size: 2.5rem;
         font-weight: bold;
@@ -26,15 +27,69 @@ st.markdown("""
         border-radius: 10px;
         margin-bottom: 2rem;
     }
+    
+    /* Navigation Banner */
+    .stNavigationMenu {
+        background-color: #1E3A8A;
+        padding: 1rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    .nav-link {
+        color: white;
+        padding: 0.5rem 1rem;
+        text-decoration: none;
+        border-radius: 5px;
+        margin: 0 0.5rem;
+    }
+    .nav-link:hover {
+        background-color: #2563EB;
+    }
+    
+    /* Market Index Cards */
+    .market-card {
+        background: white;
+        padding: 1rem;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        margin-bottom: 1rem;
+    }
+    .market-card:hover {
+        transform: translateY(-2px);
+        transition: transform 0.2s;
+    }
+    .positive-change {
+        color: #10B981;
+        font-weight: bold;
+    }
+    .negative-change {
+        color: #EF4444;
+        font-weight: bold;
+    }
+    
+    /* Footer */
+    .footer {
+        background: #F3F4F6;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-top: 3rem;
+    }
+    .footer-link {
+        color: #374151;
+        text-decoration: none;
+        margin: 0 1rem;
+    }
+    .footer-link:hover {
+        color: #2563EB;
+    }
+    
+    /* Metrics and Charts */
     .metric-card {
         background: white;
         padding: 1.5rem;
         border-radius: 10px;
         box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-        transition: transform 0.2s;
-    }
-    .metric-card:hover {
-        transform: translateY(-5px);
+        margin-bottom: 1rem;
     }
     .chart-container {
         background: white;
@@ -43,27 +98,122 @@ st.markdown("""
         margin: 1rem 0;
         box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
     }
-    .technical-section {
-        margin-top: 2rem;
-        padding: 1.5rem;
-        border-radius: 10px;
-        background: #F8FAFC;
-        border: 1px solid #E2E8F0;
-    }
-    .stSelectbox {
-        background-color: white;
-        border-radius: 5px;
-        padding: 2px;
-    }
-    .stock-metrics {
-        display: flex;
-        justify-content: space-between;
-        padding: 10px;
-        background: #F1F5F9;
-        border-radius: 8px;
-        margin: 10px 0;
-    }
 </style>
+""", unsafe_allow_html=True)
+
+# Mock market data
+MARKET_INDICES = {
+    "US Markets": {
+        "S&P 500": {"value": "4,927.25", "change": "+1.25%", "positive": True},
+        "Dow Jones": {"value": "38,654.42", "change": "-0.32%", "positive": False},
+        "NASDAQ": {"value": "15,990.66", "change": "+1.75%", "positive": True}
+    },
+    "European Markets": {
+        "FTSE 100": {"value": "7,615.35", "change": "+0.45%", "positive": True},
+        "DAX": {"value": "16,918.21", "change": "-0.72%", "positive": False},
+        "CAC 40": {"value": "7,592.26", "change": "+0.89%", "positive": True}
+    },
+    "Australian Markets": {
+        "ASX 200": {"value": "7,642.80", "change": "+0.95%", "positive": True},
+        "All Ordinaries": {"value": "7,875.20", "change": "+0.88%", "positive": True},
+        "ASX 300": {"value": "7,525.40", "change": "+0.92%", "positive": True}
+    }
+}
+
+# Navigation Banner
+st.markdown("""
+<div class="stNavigationMenu">
+    <a href="#" class="nav-link">My Portfolio</a>
+    <a href="#" class="nav-link">Markets</a>
+    <a href="#" class="nav-link">News</a>
+    <a href="#" class="nav-link">Analysis</a>
+    <a href="#" class="nav-link">Watchlist</a>
+</div>
+""", unsafe_allow_html=True)
+
+# Main content area
+col_main, col_markets = st.columns([2, 1])
+
+with col_markets:
+    st.markdown("### Global Markets")
+    
+    # Market selection
+    selected_region = st.selectbox(
+        "Select Region",
+        options=list(MARKET_INDICES.keys()),
+        index=0
+    )
+    
+    # Display market indices for selected region
+    for index, data in MARKET_INDICES[selected_region].items():
+        st.markdown(f"""
+        <div class="market-card">
+            <h4>{index}</h4>
+            <p style="font-size: 1.2rem;">{data['value']}</p>
+            <p class="{'positive-change' if data['positive'] else 'negative-change'}">{data['change']}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+with col_main:
+    # Your existing main dashboard content here
+    st.markdown("## Market Analysis")
+    
+    # Sample stock selection
+    selected_stock = st.selectbox(
+        "Select Stock",
+        options=["AAPL", "MSFT"],
+        format_func=lambda x: f"{x} - {SAMPLE_DATA[x]['name']}"
+    )
+    
+    # Generate and display stock data
+    stock_info = SAMPLE_DATA[selected_stock]
+    hist_data = generate_sample_data(
+        selected_stock,
+        stock_info["price"],
+        stock_info["volatility"],
+        90
+    )
+    
+    # Display stock chart
+    fig = go.Figure()
+    fig.add_trace(go.Candlestick(
+        x=hist_data.index,
+        open=hist_data['Open'],
+        high=hist_data['High'],
+        low=hist_data['Low'],
+        close=hist_data['Close'],
+        name="OHLC"
+    ))
+    
+    fig.update_layout(
+        title=f"{selected_stock} Price Chart",
+        yaxis_title="Price",
+        xaxis_title="Date",
+        template="plotly_white",
+        height=500
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+
+# Footer
+st.markdown("""
+<div class="footer">
+    <div style="display: flex; justify-content: center; margin-bottom: 1rem;">
+        <a href="#" class="footer-link">About Us</a>
+        <a href="#" class="footer-link">Help Center</a>
+        <a href="#" class="footer-link">Contact</a>
+        <a href="#" class="footer-link">Feedback</a>
+    </div>
+    <div style="display: flex; justify-content: center; margin-bottom: 1rem;">
+        <a href="#" class="footer-link">Terms & Conditions</a>
+        <a href="#" class="footer-link">Privacy Policy</a>
+        <a href="#" class="footer-link">Security</a>
+        <a href="#" class="footer-link">Cookies</a>
+    </div>
+    <div style="text-align: center; color: #6B7280; font-size: 0.875rem;">
+        © 2024 Global Markets Dashboard. All rights reserved.
+    </div>
+</div>
 """, unsafe_allow_html=True)
 
 # Generate sample data for Apple and Microsoft
@@ -131,172 +281,4 @@ SAMPLE_DATA = {
         "price": 330.0,
         "volatility": 0.012
     }
-}
-
-# Sidebar
-st.sidebar.markdown("## Dashboard Controls")
-selected_stock = st.sidebar.selectbox(
-    "Select Stock",
-    options=["AAPL", "MSFT"],
-    format_func=lambda x: f"{x} - {SAMPLE_DATA[x]['name']}"
-)
-
-time_period = st.sidebar.select_slider(
-    "Time Period",
-    options=[30, 60, 90],
-    value=90,
-    format_func=lambda x: f"{x} Days"
-)
-
-# Generate data for selected stock
-stock_info = SAMPLE_DATA[selected_stock]
-hist_data = generate_sample_data(
-    selected_stock,
-    stock_info["price"],
-    stock_info["volatility"],
-    time_period
-)
-
-# Main content
-st.markdown(f'<h1 class="main-header">{stock_info["name"]} ({selected_stock}) Analysis</h1>', unsafe_allow_html=True)
-
-# Company Overview
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.markdown(
-        f"""
-        <div class="metric-card">
-            <h3>Company Overview</h3>
-            <p><strong>Sector:</strong> {stock_info['sector']}</p>
-            <p><strong>Industry:</strong> {stock_info['industry']}</p>
-            <p><strong>Market Cap:</strong> ${stock_info['market_cap']}</p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-with col2:
-    st.markdown(
-        f"""
-        <div class="metric-card">
-            <h3>Key Metrics</h3>
-            <p><strong>P/E Ratio:</strong> {stock_info['pe_ratio']:.2f}</p>
-            <p><strong>Dividend Yield:</strong> {stock_info['dividend_yield']}%</p>
-            <p><strong>Current Price:</strong> ${hist_data['Close'][-1]:.2f}</p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-with col3:
-    st.markdown(
-        f"""
-        <div class="metric-card">
-            <h3>Performance</h3>
-            <p><strong>Daily Change:</strong> {((hist_data['Close'][-1] / hist_data['Close'][-2] - 1) * 100):.2f}%</p>
-            <p><strong>30-Day Return:</strong> {((hist_data['Close'][-1] / hist_data['Close'][0] - 1) * 100):.2f}%</p>
-            <p><strong>Volume:</strong> {hist_data['Volume'][-1]:,.0f}</p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-# Technical Analysis Section
-st.markdown("## Technical Analysis")
-
-# Price and Volume Chart
-fig = go.Figure()
-
-fig.add_trace(go.Candlestick(
-    x=hist_data.index,
-    open=hist_data['Open'],
-    high=hist_data['High'],
-    low=hist_data['Low'],
-    close=hist_data['Close'],
-    name="OHLC"
-))
-
-# Add Bollinger Bands
-upper, middle, lower = calculate_bollinger_bands(hist_data['Close'])
-fig.add_trace(go.Scatter(x=hist_data.index, y=upper, name='Upper BB', line=dict(color='gray', dash='dash')))
-fig.add_trace(go.Scatter(x=hist_data.index, y=middle, name='Middle BB', line=dict(color='blue', dash='dash')))
-fig.add_trace(go.Scatter(x=hist_data.index, y=lower, name='Lower BB', line=dict(color='gray', dash='dash')))
-
-fig.update_layout(
-    title=f"{selected_stock} Price Chart with Bollinger Bands",
-    yaxis_title="Price",
-    xaxis_title="Date",
-    template="plotly_white",
-    height=600,
-)
-
-st.plotly_chart(fig, use_container_width=True)
-
-# Technical Indicators
-col1, col2 = st.columns(2)
-
-with col1:
-    # RSI Chart
-    rsi = calculate_rsi(hist_data['Close'])
-    fig_rsi = go.Figure()
-    fig_rsi.add_trace(go.Scatter(x=hist_data.index, y=rsi, name='RSI'))
-    fig_rsi.add_hline(y=70, line_dash="dash", line_color="red", annotation_text="Overbought")
-    fig_rsi.add_hline(y=30, line_dash="dash", line_color="green", annotation_text="Oversold")
-    fig_rsi.update_layout(title="Relative Strength Index (RSI)", height=300)
-    st.plotly_chart(fig_rsi, use_container_width=True)
-
-with col2:
-    # Moving Averages
-    sma_20 = calculate_sma(hist_data['Close'], 20)
-    ema_50 = calculate_ema(hist_data['Close'], 50)
-    
-    fig_ma = go.Figure()
-    fig_ma.add_trace(go.Scatter(x=hist_data.index, y=sma_20, name='SMA 20'))
-    fig_ma.add_trace(go.Scatter(x=hist_data.index, y=ema_50, name='EMA 50'))
-    fig_ma.update_layout(title="Moving Averages", height=300)
-    st.plotly_chart(fig_ma, use_container_width=True)
-
-# Trading Signals
-st.markdown("## Trading Signals")
-current_rsi = rsi[-1]
-sma_signal = "Bullish" if sma_20[-1] > ema_50[-1] else "Bearish"
-rsi_signal = "Overbought" if current_rsi > 70 else "Oversold" if current_rsi < 30 else "Neutral"
-
-signal_col1, signal_col2, signal_col3 = st.columns(3)
-with signal_col1:
-    st.markdown(
-        f"""
-        <div class="metric-card">
-            <h3>RSI Signal</h3>
-            <p><strong>Current RSI:</strong> {current_rsi:.2f}</p>
-            <p><strong>Signal:</strong> {rsi_signal}</p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-with signal_col2:
-    st.markdown(
-        f"""
-        <div class="metric-card">
-            <h3>Moving Average Signal</h3>
-            <p><strong>SMA(20):</strong> ${sma_20[-1]:.2f}</p>
-            <p><strong>Signal:</strong> {sma_signal}</p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-with signal_col3:
-    bb_position = (hist_data['Close'][-1] - lower[-1]) / (upper[-1] - lower[-1]) * 100
-    bb_signal = "Oversold" if bb_position < 20 else "Overbought" if bb_position > 80 else "Neutral"
-    st.markdown(
-        f"""
-        <div class="metric-card">
-            <h3>Bollinger Bands Signal</h3>
-            <p><strong>Position:</strong> {bb_position:.2f}%</p>
-            <p><strong>Signal:</strong> {bb_signal}</p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    ) 
+} 
