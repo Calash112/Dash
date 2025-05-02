@@ -13,6 +13,52 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Sample company data
+SAMPLE_DATA = {
+    "AAPL": {
+        "name": "Apple Inc.",
+        "sector": "Technology",
+        "industry": "Consumer Electronics",
+        "market_cap": "2.5T",
+        "pe_ratio": 28.5,
+        "dividend_yield": 0.65,
+        "price": 175.0,
+        "volatility": 0.015
+    },
+    "MSFT": {
+        "name": "Microsoft Corporation",
+        "sector": "Technology",
+        "industry": "Software",
+        "market_cap": "2.8T",
+        "pe_ratio": 32.1,
+        "dividend_yield": 0.85,
+        "price": 330.0,
+        "volatility": 0.012
+    }
+}
+
+# Generate sample data for Apple and Microsoft
+def generate_sample_data(symbol, start_price, volatility, days=90):
+    np.random.seed(42 if symbol == "AAPL" else 24)
+    dates = pd.date_range(end=datetime.now(), periods=days)
+    prices = [start_price]
+    
+    for _ in range(days-1):
+        change = np.random.normal(0, volatility)
+        prices.append(prices[-1] * (1 + change))
+    
+    df = pd.DataFrame({
+        'Date': dates,
+        'Open': prices,
+        'Close': [p * (1 + np.random.normal(0, 0.002)) for p in prices],
+        'High': [p * (1 + abs(np.random.normal(0, 0.003))) for p in prices],
+        'Low': [p * (1 - abs(np.random.normal(0, 0.003))) for p in prices],
+        'Volume': [int(np.random.normal(1000000, 200000)) for _ in prices]
+    })
+    
+    df.set_index('Date', inplace=True)
+    return df
+
 # Enhanced CSS styling
 st.markdown("""
 <style>
@@ -155,7 +201,6 @@ with col_markets:
         """, unsafe_allow_html=True)
 
 with col_main:
-    # Your existing main dashboard content here
     st.markdown("## Market Analysis")
     
     # Sample stock selection
@@ -216,28 +261,6 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Generate sample data for Apple and Microsoft
-def generate_sample_data(symbol, start_price, volatility, days=90):
-    np.random.seed(42 if symbol == "AAPL" else 24)
-    dates = pd.date_range(end=datetime.now(), periods=days)
-    prices = [start_price]
-    
-    for _ in range(days-1):
-        change = np.random.normal(0, volatility)
-        prices.append(prices[-1] * (1 + change))
-    
-    df = pd.DataFrame({
-        'Date': dates,
-        'Open': prices,
-        'Close': [p * (1 + np.random.normal(0, 0.002)) for p in prices],
-        'High': [p * (1 + abs(np.random.normal(0, 0.003))) for p in prices],
-        'Low': [p * (1 - abs(np.random.normal(0, 0.003))) for p in prices],
-        'Volume': [int(np.random.normal(1000000, 200000)) for _ in prices]
-    })
-    
-    df.set_index('Date', inplace=True)
-    return df
-
 # Technical Analysis Functions
 def calculate_sma(data, window):
     return data.rolling(window=window).mean()
@@ -257,28 +280,4 @@ def calculate_bollinger_bands(data, window=20):
     std = data.rolling(window=window).std()
     upper_band = sma + (std * 2)
     lower_band = sma - (std * 2)
-    return upper_band, sma, lower_band
-
-# Sample company info
-SAMPLE_DATA = {
-    "AAPL": {
-        "name": "Apple Inc.",
-        "sector": "Technology",
-        "industry": "Consumer Electronics",
-        "market_cap": "2.5T",
-        "pe_ratio": 28.5,
-        "dividend_yield": 0.65,
-        "price": 175.0,
-        "volatility": 0.015
-    },
-    "MSFT": {
-        "name": "Microsoft Corporation",
-        "sector": "Technology",
-        "industry": "Software",
-        "market_cap": "2.8T",
-        "pe_ratio": 32.1,
-        "dividend_yield": 0.85,
-        "price": 330.0,
-        "volatility": 0.012
-    }
-} 
+    return upper_band, sma, lower_band 
